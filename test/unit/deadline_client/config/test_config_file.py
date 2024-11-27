@@ -186,6 +186,68 @@ def test_config_file_env_var(fresh_deadline_config):
             del os.environ["DEADLINE_CONFIG_FILE_PATH"]
 
 
+def test_config_file_special_chars_in_path(fresh_deadline_config, special_char_string):
+    """
+    Test that setting the DEADLINE_CONFIG_FILE_PATH env var to a path with special characters
+    still succeeds.
+    """
+    # GIVEN
+    assert config_file.get_config_file_path() == Path(fresh_deadline_config).expanduser()
+
+    # WHEN
+    new_config_location = fresh_deadline_config + f"_{special_char_string}"
+    os.environ["DEADLINE_CONFIG_FILE_PATH"] = new_config_location
+
+    # THEN
+    try:
+        assert config_file.get_config_file_path() == Path(new_config_location).expanduser()
+
+        # Attempt to modify the config file as well, to make sure it can be written to
+        config.set_setting("defaults.aws_profile_name", "ANewProfile")
+        assert config.get_setting("defaults.aws_profile_name") == "ANewProfile"
+
+        # Clean up...
+        os.unlink(new_config_location)
+    finally:
+        if "DEADLINE_CONFIG_FILE_PATH" in os.environ:
+            del os.environ["DEADLINE_CONFIG_FILE_PATH"]
+        assert "DEADLINE_CONFIG_FILE_PATH" not in os.environ
+        assert config_file.get_config_file_path() == Path(fresh_deadline_config).expanduser()
+
+
+def test_config_file_unicode_path(fresh_deadline_config, unicode_string):
+    """
+    Test that Unicode strings can be properly decoded as part of the config file path.
+    """
+    # GIVEN
+    assert config_file.get_config_file_path() == Path(fresh_deadline_config).expanduser()
+
+    # WHEN
+    new_config_location = fresh_deadline_config + f'_{unicode_string["input"]}'
+    os.environ["DEADLINE_CONFIG_FILE_PATH"] = new_config_location
+
+    # THEN
+    try:
+        assert (
+            config_file.get_config_file_path()
+            == Path(fresh_deadline_config + f'_{unicode_string["expected"]}').expanduser()
+        )
+    finally:
+        if "DEADLINE_CONFIG_FILE_PATH" in os.environ:
+            del os.environ["DEADLINE_CONFIG_FILE_PATH"]
+
+
+def test_config_file_unicode_name(fresh_deadline_config, unicode_string):
+    """
+    Test that Unicode strings can be properly decoded when set as a profile name.
+    """
+    # WHEN
+    config_file.set_setting("defaults.aws_profile_name", unicode_string["input"])
+
+    # THEN
+    assert config_file.get_setting("defaults.aws_profile_name") == unicode_string["expected"]
+
+
 def test_get_best_profile_for_farm(fresh_deadline_config):
     """
     Test that it returns the exact farm + queue id match

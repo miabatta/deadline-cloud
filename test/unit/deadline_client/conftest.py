@@ -26,3 +26,29 @@ def temp_assets_dir():
 
     with tempfile.TemporaryDirectory() as assets_dir:
         yield assets_dir
+
+
+@pytest.fixture(
+    scope="function",
+    params=[
+        pytest.param("abcd", id="ASCII"),
+        pytest.param("ñ", id="N with tilde"),
+        pytest.param("😀", id="Emoji"),
+        pytest.param("דּ", id="Dalet with dagesh"),
+        pytest.param("ö", id="O with diaeresis"),
+        pytest.param("€", id="Euro symbol"),
+    ],
+)
+def special_char_string(request):
+    yield f"test_{request.param}"
+
+
+@pytest.fixture(
+    scope="function",
+    params=[
+        pytest.param({"input": "\u00c3\u00b1", "expected": "ñ"}, id="N tilde"),
+        pytest.param({"input": "\ud83d\ude0a", "expected": "😊"}, id="Smile emoji"),
+    ],
+)
+def unicode_string(request):
+    yield request.param

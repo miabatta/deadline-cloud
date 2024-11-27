@@ -85,6 +85,16 @@ parameterValues:
   value: "C:\\\\Users\\\\username\\\\value"
 """
 
+PARAMETER_VALUES_SPECIAL_CHARS = """
+parameterValues:
+- name: deadline:targetTaskRunStatus
+  value: READY
+- name: DirectoryPicker
+  value: "C:\\\\Users\\\\{SPECIAL_CHARACTER}\\\\mydir"
+- name: DirectoryPickDef1
+  value: "C:\\\\Users\\\\{SPECIAL_CHARACTER}\\\\value"
+"""
+
 READ_JOB_BUNDLE_PARAMETERS_RESULT = """
 - name: LineEditControl
   type: STRING
@@ -125,6 +135,45 @@ READ_JOB_BUNDLE_PARAMETERS_RESULT = """
   value: READY
 """
 
+READ_JOB_BUNDLE_PARAMETERS_RESULT_SPECIAL_CHARS = """
+- name: LineEditControl
+  type: STRING
+  userInterface:
+    control: LINE_EDIT
+    label: Line Edit Control
+  description: "Unrestricted line of text!"
+  default: Default line edit value.
+- name: IntSpinner
+  type: INT
+  description: A default integer spinner.
+  default: 42
+- name: StringDropdown
+  type: STRING
+  description: A dropdown with string values.
+  default: WEDNESDAY
+  allowedValues: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+- name: DirectoryPicker
+  type: PATH
+  description: Choose a directory.
+  value: "C:\\\\Users\\\\{SPECIAL_CHARACTER}\\\\mydir"
+- name: DirectoryPickDef1
+  type: PATH
+  objectType: DIRECTORY
+  dataFlow: INOUT
+  description: Choose a directory.
+  default: ./internal/directory
+  value: "C:\\\\Users\\\\{SPECIAL_CHARACTER}\\\\value"
+- name: DirectoryPickDef2
+  type: PATH
+  objectType: DIRECTORY
+  dataFlow: INOUT
+  description: Choose a directory.
+  default: ./internal/directory
+  value: {DIRECTORY_PICKER_2_VALUE}
+- name: deadline:targetTaskRunStatus
+  value: READY
+"""
+
 
 @pytest.mark.parametrize(
     "template_data,parameter_values,expected_result",
@@ -135,6 +184,12 @@ READ_JOB_BUNDLE_PARAMETERS_RESULT = """
             READ_JOB_BUNDLE_PARAMETERS_RESULT,
             id="jobtemplate-2023-09",
         ),
+        pytest.param(
+            JOB_TEMPLATE_WITH_PARAMETERS_2023_09,
+            PARAMETER_VALUES_SPECIAL_CHARS,
+            READ_JOB_BUNDLE_PARAMETERS_RESULT_SPECIAL_CHARS,
+            id="jobtemplate-2023-09-special-chars",
+        ),
     ],
 )
 def test_read_job_bundle_parameters(
@@ -143,15 +198,17 @@ def test_read_job_bundle_parameters(
     expected_result,
     fresh_deadline_config,
     temp_job_bundle_dir,
+    special_char_string,
 ):
     """
-    Tests that the read_job_bundle_parameters function loads the
+    Tests that the read_job_bundle_parameters function loads the contents of a parameter values file.
     """
     # Write the template to the job bundle
     with open(
         os.path.join(temp_job_bundle_dir, "template.yaml"),
         "w",
         encoding="utf8",
+        errors="surrogatepass",
     ) as f:
         f.write(template_data)
 
@@ -160,8 +217,9 @@ def test_read_job_bundle_parameters(
         os.path.join(temp_job_bundle_dir, "parameter_values.yaml"),
         "w",
         encoding="utf8",
+        errors="surrogatepass",
     ) as f:
-        f.write(parameter_values)
+        f.write(parameter_values.format(SPECIAL_CHARACTER=special_char_string))
 
     # Now load the parameters from this job bundle
     result = read_job_bundle_parameters(temp_job_bundle_dir)
@@ -173,7 +231,47 @@ def test_read_job_bundle_parameters(
         os.path.normpath(os.path.join(temp_job_bundle_dir, "./internal/directory"))
     )
     assert result == yaml.safe_load(
-        expected_result.format(DIRECTORY_PICKER_2_VALUE=directory_picker_2_value)
+        expected_result.format(
+            SPECIAL_CHARACTER=special_char_string,
+            DIRECTORY_PICKER_2_VALUE=directory_picker_2_value,
+        )
+    )
+
+
+def test_read_job_bundle_parameters_unicode(
+    fresh_deadline_config, temp_job_bundle_dir, unicode_string
+):
+    """
+    Tests that job bundle parameters containing Unicode strings can be read properly.
+    """
+    # GIVEN
+    with open(
+        os.path.join(temp_job_bundle_dir, "template.yaml"),
+        "w",
+        encoding="utf8",
+        errors="surrogatepass",
+    ) as f:
+        f.write(JOB_TEMPLATE_WITH_PARAMETERS_2023_09)
+
+    # WHEN
+    with open(
+        os.path.join(temp_job_bundle_dir, "parameter_values.yaml"),
+        "w",
+        encoding="utf8",
+        errors="surrogatepass",
+    ) as f:
+        f.write(PARAMETER_VALUES_SPECIAL_CHARS.format(SPECIAL_CHARACTER=unicode_string["input"]))
+    result = read_job_bundle_parameters(temp_job_bundle_dir)
+
+    # THEN
+    directory_picker_2_value = json.dumps(
+        os.path.normpath(os.path.join(temp_job_bundle_dir, "./internal/directory"))
+    )
+    assert result == yaml.safe_load(
+        READ_JOB_BUNDLE_PARAMETERS_RESULT_SPECIAL_CHARS.format(
+            SPECIAL_CHARACTER=unicode_string["expected"],
+            DIRECTORY_PICKER_2_VALUE=directory_picker_2_value,
+        ),
     )
 
 

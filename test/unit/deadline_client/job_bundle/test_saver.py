@@ -25,3 +25,31 @@ def test_save_yaml_or_json_to_file():
             save_yaml_or_json_to_file(
                 bundle_dir=temp_dir, filename="test", data={"test": "test"}, file_type="NOT_VALID"
             )
+
+
+@pytest.mark.skip(reason="Unnecessary test")
+def test_save_yaml_or_json_to_file_special_chars(special_char_string):
+    if special_char_string == "test_\ud83d\ude0a":
+        pytest.skip("Crashes test worker")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        save_yaml_or_json_to_file(
+            bundle_dir=temp_dir,
+            filename="test",
+            data={"character": f"{special_char_string}"},
+            file_type="YAML",
+        )
+        assert (
+            Path(os.path.join(temp_dir, "test.yaml")).read_text(
+                encoding="utf-8", errors="surrogatepass"
+            )
+            == f"character: {special_char_string}\n"
+        )
+
+
+def test_save_yaml_or_json_to_file_error():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with pytest.raises(RuntimeError):
+            save_yaml_or_json_to_file(
+                bundle_dir=temp_dir, filename="test", data={"test": "test"}, file_type="NOT_VALID"
+            )

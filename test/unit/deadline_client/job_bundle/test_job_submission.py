@@ -86,6 +86,32 @@ def test_flatten_asset_references(
     assert response.output_directories == expected_output.output_directories
 
 
+def test_flatten_asset_references_special_chars(special_char_string) -> None:
+    """
+    Test that FlatAssetReferences.from_dict can take in special characters without error.
+    """
+    assets_input = {
+        "assetReferences": {
+            "inputs": {
+                "directories": [f"{special_char_string}_dir"],
+                "filenames": [f"{special_char_string}.txt"],
+            },
+            "outputs": {"directories": [f"{special_char_string}_output_dir"]},
+        }
+    }
+
+    expected_output = AssetReferences(
+        input_filenames=set([f"{special_char_string}.txt"]),
+        input_directories=set([f"{special_char_string}_dir"]),
+        output_directories=set([f"{special_char_string}_output_dir"]),
+    )
+
+    response = AssetReferences.from_dict(assets_input)
+    assert response.input_filenames == expected_output.input_filenames
+    assert response.input_directories == expected_output.input_directories
+    assert response.output_directories == expected_output.output_directories
+
+
 def test_split_parameter_args() -> None:
     """
     Tests that split_parameter_args parses the input job bundle paramters

@@ -55,6 +55,34 @@ def test_create_job_bundle_dir(fresh_deadline_config):
         assert sorted(os.listdir(os.path.join(tmpdir, "2023-04"))) == EXPECTED_DIRS[3:]
 
 
+def test_create_job_bundle_dir_special_chars(fresh_deadline_config, special_char_string):
+    if special_char_string == "test_\ude0a":
+        pytest.skip("Crashes the pytest workers when creating the fake directory")
+    elif special_char_string in ["test_😀", "test_€"]:
+        pytest.skip(
+            "These characters are non-alphanumeric, so are removed from the job name when creating the bundle"
+        )
+
+    # Still use the temporary directory for job history, but attach a directory with a special character to mimic actual paths
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config.set_setting(
+            "settings.job_history_dir",
+            os.path.join(tmpdir, f"directory_with_{special_char_string}"),
+        )
+        EXPECTED_DIR = f"2024-09-04-01-cli_job-Example With {special_char_string}"
+        EXPECTED_FULL_PATH = os.path.join(
+            tmpdir, f"directory_with_{special_char_string}", EXPECTED_DIR[:7], EXPECTED_DIR
+        )
+
+        with freeze_time("2024-09-04-15T03:15"):
+            assert (
+                job_bundle.create_job_history_bundle_dir(
+                    "cli_job", f"Example With {special_char_string}"
+                )
+                == EXPECTED_FULL_PATH
+            )
+
+
 @pytest.mark.parametrize(
     "submitter_name, job_name, freeze_date, expected_output_path",
     [
