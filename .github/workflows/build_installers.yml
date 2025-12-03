@@ -1,11 +1,11 @@
-name: "Deadline Cloud Client Build Installer"
+name: Deadline Cloud Client Build Installer
 
 on:
   workflow_dispatch:
     inputs:
       os:
         required: true
-        default: "linux"
+        default: linux
         type: choice
         options:
         - Linux
@@ -20,7 +20,7 @@ on:
       ref:
         required: true
         type: string
-        default: "mainline"
+        default: mainline
       environment:
         required: true
         type: choice
@@ -29,9 +29,10 @@ on:
 
 jobs:
   BuildInstaller:
-    if: (github.repository == 'aws-deadline/deadline-cloud')
+    if: (github.repository == 'miabatta/deadline-cloud')
     name: Build Installer
-    uses: aws-deadline/.github/.github/workflows/reusable_build_installers.yml@mainline
+    uses: 
+      miabatta/.github/.github/workflows/reusable_build_installers.yml@mainline
     permissions:
       contents: read
       id-token: write
@@ -41,4 +42,4 @@ jobs:
       ref_type: ${{inputs.ref_type}}
       ref: ${{inputs.ref}}
       oses: "['${{inputs.os}}']"
-      project_name: "deadline-cloud"
+      project_name: deadline-cloud
